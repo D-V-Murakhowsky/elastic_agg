@@ -63,7 +63,6 @@ class ESOperations:
         try:
             doc: dict = asdict(doc_to_save)
             res: Dict[str, Any] = cls.es.index(index='content_index', document=doc)
-            print(res)
         except Exception as ex:
             logger.error(f'Error while saving to Elastic. Saving {doc_to_save} failed.')
             logger.error(f'Raised error: {ex}')
