@@ -1,10 +1,11 @@
 from elasticsearch import Elasticsearch
+from elasticsearch_dsl import (Search, A)
 import logging
 import pandas as pd
 from pandas import DataFrame
 from random import choices
 from dataclasses import dataclass, asdict
-from typing import Dict, Any
+from typing import (Dict, Any)
 
 CONTENT_FEATURES = ['Wine', 'Producer', 'Denomination']
 
@@ -38,7 +39,7 @@ class ESOperations:
             self.sample_content.extend(list(df[col]))
 
     def make_and_fill_sample_index(self):
-        self.create_sample_index()
+        # self.create_sample_index()
         for _ in range(50):
             cont: list = choices(self.sample_content, k=3)
             doc: ContentElement = ContentElement(Wine=cont[0],
@@ -62,12 +63,22 @@ class ESOperations:
         try:
             doc: dict = asdict(doc_to_save)
             res: Dict[str, Any] = cls.es.index(index='content_index', document=doc)
-            return res
+            print(res)
         except Exception as ex:
             logger.error(f'Error while saving to Elastic. Saving {doc_to_save} failed.')
             logger.error(f'Raised error: {ex}')
             logger.info(doc_to_save)
 
+    @classmethod
+    def get_counts(cls, feature):
+        s = Search(using=cls.es, index='content_index')
+        a = A("terms", field=f'{feature}.keyword', size=100000)
+        s.aggs.metric('wines', a)
+        res = s.execute().aggregations.wines.buckets
+        freqs = {item['key']: item['doc_count'] for item in res}
+        return freqs
+
 
 if __name__ == '__main__':
     eso = ESOperations()
+    print(eso.get_counts('Wine'))
